@@ -1,3 +1,4 @@
+import model.FlowObservation;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.time.Time;
@@ -14,6 +15,8 @@ import util.SerializationUtil;
 
 import java.util.Properties;
 
+import static org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer.Semantic.EXACTLY_ONCE;
+
 public class Main {
     private static Properties flinkProperties;
     private static Properties kafkaProperty;
@@ -22,7 +25,7 @@ public class Main {
         StreamExecutionEnvironment env = initFlinkEnv();
         Properties kafkaProperties = initKafkaProperties();
         InitializeSetUp initializeSetUp = new InitializeSetUp(flinkProperties, kafkaProperties);
-        FlinkKafkaProducer kafkaProducer = new FlinkKafkaProducer((String) kafkaProperties.get("output.topic"),
+        FlinkKafkaProducer kafkaProducer = new FlinkKafkaProducer("metrics",
                 new SerializationUtil(), kafkaProperties);
 
         DataStream<Tuple3<String, String, Long>> rawStream = initializeSetUp.ingestStage(env);
@@ -34,7 +37,11 @@ public class Main {
 //                    }
 //                });
 
+        rawStream.addSink(kafkaProducer);
         rawStream.print();
+        DataStream<FlowObservation> flowStream = initializeSetUp.parseFlowStreams(rawStream);
+        flowStream.addSink(kafkaProducer);
+        flowStream.print();
         env.execute("Flink Traffic Analyzer");
     }
 

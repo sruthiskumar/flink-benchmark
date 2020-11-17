@@ -1,6 +1,8 @@
+import model.FlowObservation;
 import org.apache.flink.api.common.eventtime.WatermarkGenerator;
 import org.apache.flink.api.common.eventtime.WatermarkGeneratorSupplier;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -15,6 +17,7 @@ import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.apache.flink.streaming.runtime.operators.util.AssignerWithPeriodicWatermarksAdapter;
 import util.DeserializationUtil;
+import util.ParserUtil;
 
 import java.util.Arrays;
 import java.util.Properties;
@@ -62,12 +65,19 @@ public class InitializeSetUp {
         rawStream.print();
         return rawStream;
     }
-//
-///**
-// * Parses the speed and flow streams
-// */
-//    public DataStream<FlowObservation> filterSpeedStreams(DataStream<Tuple3<String, String, Long>> rawStream)  {
-//        return rawStream.filter(val -> val.f1.contains("flow")).map()
-//
-//    }
+
+/**
+ * Parses the  flow streams
+ */
+    public DataStream<FlowObservation> parseFlowStreams(DataStream<Tuple3<String, String, Long>> rawStream)  {
+        DataStream<FlowObservation> flowStream =
+                rawStream.map(new MapFunction<Tuple3<String, String, Long>, FlowObservation>() {
+            @Override
+            public FlowObservation map(Tuple3<String, String, Long> value) throws Exception {
+               return ParserUtil.parseLineFlowObservation(value.f0, value.f1, value.f2);
+            }
+        });
+        flowStream.print();
+        return flowStream;
+    }
 }
