@@ -9,7 +9,7 @@ import java.text.SimpleDateFormat;
 import java.time.Instant;
 
 public class ParserUtil {
-        public static FlowObservation parseLineFlowObservation(String key, String value, Long time) throws ParseException {
+        public FlowObservation parseLineFlowObservation(String key, String value, Long time) throws ParseException {
             JsonObject jsonObject = new JsonParser().parse(value).getAsJsonObject();
             Long timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z").parse(jsonObject.get("timestamp").getAsString()).getTime();
             FlowObservation flowObservation

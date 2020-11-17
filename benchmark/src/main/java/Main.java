@@ -1,20 +1,27 @@
 import model.FlowObservation;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
+import org.apache.flink.api.common.functions.RichFlatMapFunction;
+import org.apache.flink.api.common.state.ValueState;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction;
 import org.apache.flink.streaming.api.windowing.assigners.SlidingProcessingTimeWindows;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
+import org.apache.flink.util.Collector;
 import util.ConfigurationUtil;
 import util.SerializationUtil;
 
 import java.util.Properties;
 
+import static org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer.Semantic.AT_LEAST_ONCE;
 import static org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer.Semantic.EXACTLY_ONCE;
 
 public class Main {
@@ -26,22 +33,36 @@ public class Main {
         Properties kafkaProperties = initKafkaProperties();
         InitializeSetUp initializeSetUp = new InitializeSetUp(flinkProperties, kafkaProperties);
         FlinkKafkaProducer kafkaProducer = new FlinkKafkaProducer("metrics",
-                new SerializationUtil(), kafkaProperties);
+                new SerializationUtil(), kafkaProperties, AT_LEAST_ONCE);
 
         DataStream<Tuple3<String, String, Long>> rawStream = initializeSetUp.ingestStage(env);
-//        DataStream<Tuple2<String, Long>> mapped =
-//                rawStream.map(new MapFunction<Tuple3<String, String, Long>, Tuple2<String, Long>>() {
-//                    @Override
-//                    public Tuple2<String, Long> map(Tuple3<String, String, Long> stringStringLongTuple3) throws Exception {
-//                        return new Tuple2<String, Long>(stringStringLongTuple3.f0, stringStringLongTuple3.f2);
-//                    }
-//                });
 
-        rawStream.addSink(kafkaProducer);
-        rawStream.print();
+//        rawStream.addSink(kafkaProducer);
+       // rawStream.print();
         DataStream<FlowObservation> flowStream = initializeSetUp.parseFlowStreams(rawStream);
-        flowStream.addSink(kafkaProducer);
-        flowStream.print();
+//        flowStream.addSink(kafkaProducer);
+//          flowStream.print();
+
+          flowStream.keyBy(x -> x.flow)
+                .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<Integer, Integer>>() {
+
+                    private ValueState<Integer> flowCount;
+                    @Override
+                    public void flatMap(FlowObservation value, Collector<Tuple2<Integer, Integer>> out) throws Exception {
+                        Integer count = flowCount.value() != null ? flowCount.value() : 0;
+                        flowCount.update(count + 1);
+                        out.collect(new Tuple2<>(value.flow, count));
+                    }
+                    @Override
+                    public void open(Configuration parameters) throws Exception {
+
+                        flowCount = getRuntimeContext().getState(
+                                new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                    }
+
+                }
+               ).print();
+
         env.execute("Flink Traffic Analyzer");
     }
 

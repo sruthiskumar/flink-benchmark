@@ -1,17 +1,17 @@
 package model;
 
 public class FlowObservation {
-    private String measurementId;
-    private String internalId;
-    private Long timestamp;
-    private Double latitude;
-    private Double longitude;
-    private Integer flow;
-    private Integer period;
-    private Integer accuracy;
-    private Integer numLanes;
-    private Long publishTimestamp;
-    private Long ingestTimestamp;
+    public String measurementId;
+    public String internalId;
+    public Long timestamp;
+    public Double latitude;
+    public Double longitude;
+    public Integer flow;
+    public Integer period;
+    public Integer accuracy;
+    public Integer numLanes;
+    public Long publishTimestamp;
+    public Long ingestTimestamp;
 
     public FlowObservation(String measurementId, String internalId, Long timestamp, Double latitude, Double longitude, Integer flow, Integer period, Integer accuracy, Integer numLanes, Long publishTimestamp, Long ingestTimestamp) {
         this.measurementId = measurementId;

@@ -1,3 +1,5 @@
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import model.FlowObservation;
 import org.apache.flink.api.common.eventtime.WatermarkGenerator;
 import org.apache.flink.api.common.eventtime.WatermarkGeneratorSupplier;
@@ -7,19 +9,15 @@ import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.api.java.typeutils.runtime.Tuple0Serializer;
-import org.apache.flink.api.java.typeutils.runtime.TupleSerializer;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
-import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
-import org.apache.flink.streaming.runtime.operators.util.AssignerWithPeriodicWatermarksAdapter;
 import util.DeserializationUtil;
-import util.ParserUtil;
 
-import java.util.Arrays;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.Properties;
 
 public class InitializeSetUp {
@@ -38,7 +36,7 @@ public class InitializeSetUp {
     public DataStream<Tuple3<String, String, Long>> ingestStage(StreamExecutionEnvironment env) {
         FlinkKafkaConsumer<Tuple3<String, String, Long>> kafkaSource = new FlinkKafkaConsumer(
 //                Arrays.asList(kafkaProperty.getProperty("flow.topic"), kafkaProperty.getProperty("speed.topic")),
-                "ndwflow",
+                "flowtest",
                 new DeserializationUtil(), kafkaProperty);
 
         if (kafkaProperty.contains("earliest")) {
@@ -62,7 +60,6 @@ public class InitializeSetUp {
                         return element.f2;
                     }
                 });
-        rawStream.print();
         return rawStream;
     }
 
@@ -74,10 +71,25 @@ public class InitializeSetUp {
                 rawStream.map(new MapFunction<Tuple3<String, String, Long>, FlowObservation>() {
             @Override
             public FlowObservation map(Tuple3<String, String, Long> value) throws Exception {
-               return ParserUtil.parseLineFlowObservation(value.f0, value.f1, value.f2);
+                JsonObject jsonObject = new JsonParser().parse(value.f1).getAsJsonObject();
+                String time = jsonObject.get("timestamp").getAsString().substring(0,
+                        jsonObject.get("timestamp").getAsString().indexOf("."));
+                Long timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(time).getTime();
+                FlowObservation flowObservation
+                        = new FlowObservation(value.f0.substring(0, value.f0.lastIndexOf("/")),
+                        value.f0.substring(value.f0.lastIndexOf("/") + 1),
+                        timeStamp,
+                        jsonObject.get("lat").getAsDouble(),
+                        jsonObject.get("long").getAsDouble(),
+                        jsonObject.get("flow").getAsInt(),
+                        jsonObject.get("period").getAsInt(),
+                        jsonObject.get("accuracy").getAsInt(),
+                        jsonObject.get("num_lanes").getAsInt(),
+                        value.f2,
+                        Instant.now().toEpochMilli());
+                return flowObservation;
             }
         });
-        flowStream.print();
         return flowStream;
     }
 }
