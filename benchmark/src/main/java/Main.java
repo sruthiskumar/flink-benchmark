@@ -1,10 +1,8 @@
 import model.FlowObservation;
-import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
-import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
@@ -12,8 +10,8 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction;
-import org.apache.flink.streaming.api.windowing.assigners.SlidingProcessingTimeWindows;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
+import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
 import org.apache.flink.util.Collector;
 import util.ConfigurationUtil;
@@ -22,7 +20,6 @@ import util.SerializationUtil;
 import java.util.Properties;
 
 import static org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer.Semantic.AT_LEAST_ONCE;
-import static org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer.Semantic.EXACTLY_ONCE;
 
 public class Main {
     private static Properties flinkProperties;
@@ -62,6 +59,15 @@ public class Main {
 
                 }
                ).print();
+//                  .keyBy(0).max(1)
+//                  .keyBy(0).window(TumblingProcessingTimeWindows.of(Time.seconds(20)))
+//                  .reduce(new ReduceFunction<Tuple2<Integer, Integer>>() {
+//                      @Override
+//                      public Tuple2<Integer, Integer> reduce(Tuple2<Integer, Integer> value1, Tuple2<Integer, Integer> value2) throws Exception {
+//                          return new Tuple2<>(value1.f0, value1.f1 + value2.f1);
+//                      }
+//                  })
+
 
         env.execute("Flink Traffic Analyzer");
     }
