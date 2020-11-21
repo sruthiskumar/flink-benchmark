@@ -31,7 +31,7 @@ def main(argv):
       avgvalueWrite.append(line.split(' ')[13])
 
   maxlen = max([len(valueRead), len(valueWrite), len(avgvalueRead), len(avgvalueWrite)])
-  df = pd.DataFrame([counter[:maxlen], valueRead, valueWrite, avgvalueRead, avgvalueWrite])
+  df = pd.DataFrame([(range(maxlen)), valueRead, valueWrite, avgvalueRead, avgvalueWrite])
   df = df.T
   df.columns=['Counter','Read','Write', 'Read Average(Rolling)', 'Write Average(Rolling)']
   df.to_csv(outname, index=False)
