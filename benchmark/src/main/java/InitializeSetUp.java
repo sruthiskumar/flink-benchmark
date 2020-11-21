@@ -1,6 +1,7 @@
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import model.FlowObservation;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -10,8 +11,12 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import util.DeserializationUtil;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.Properties;
@@ -20,7 +25,9 @@ public class InitializeSetUp {
     private  Properties flinkProperty;
     private  Properties kafkaProperty;
 
-    public InitializeSetUp(Properties flinkProperties, Properties kafkaProperties) {
+    Logger logger = LoggerFactory.getLogger(InitializeSetUp.class);
+
+    public InitializeSetUp(Properties flinkProperties, Properties kafkaProperties) throws IOException {
         this.flinkProperty = flinkProperties;
         this.kafkaProperty = kafkaProperties;
     }
@@ -32,7 +39,7 @@ public class InitializeSetUp {
     public DataStream<Tuple3<String, String, Long>> ingestStage(StreamExecutionEnvironment env) {
         FlinkKafkaConsumer<Tuple3<String, String, Long>> kafkaSource = new FlinkKafkaConsumer(
 //                Arrays.asList(kafkaProperty.getProperty("flow.topic"), kafkaProperty.getProperty("speed.topic")),
-                "flowtest",
+                kafkaProperty.getProperty("flow.topic"),
                 new DeserializationUtil(), kafkaProperty);
 
         if (kafkaProperty.contains("earliest")) {
@@ -40,7 +47,7 @@ public class InitializeSetUp {
         } else {
             kafkaSource.setStartFromLatest();
         }
-        System.out.println("Hello World");
+//        logger.info("Hello World");
 
         DataStream<Tuple3<String, String, Long>> rawStream = env.addSource(kafkaSource,
                 TypeInformation.of(new TypeHint<Tuple3<String, String, Long>>(){}))

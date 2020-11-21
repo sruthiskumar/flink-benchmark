@@ -1,9 +1,10 @@
 import model.FlowObservation;
-import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
+import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.streaming.api.TimeCharacteristic;
@@ -35,30 +36,55 @@ public class Main {
         DataStream<Tuple3<String, String, Long>> rawStream = initializeSetUp.ingestStage(env);
 
 //        rawStream.addSink(kafkaProducer);
-       // rawStream.print();
+// rawStream.print();
         DataStream<FlowObservation> flowStream = initializeSetUp.parseFlowStreams(rawStream);
 //        flowStream.addSink(kafkaProducer);
-//          flowStream.print();
+//        flowStream.print();
+        // Key by flow (31 keys))
+//          flowStream.keyBy(x -> x.flow)
+//                .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<Integer, Integer>>() {
+//
+//                    private ValueState<Integer> flowCount;
+//                    @Override
+//                    public void flatMap(FlowObservation value, Collector<Tuple2<Integer, Integer>> out) throws Exception {
+//                        Integer count = flowCount.value() != null ? flowCount.value() : 0;
+//                        flowCount.update(count + 1);
+//                        out.collect(new Tuple2<>(value.flow, count));
+//                    }
+//                    @Override
+//                    public void open(Configuration parameters) throws Exception {
+//
+//                        flowCount = getRuntimeContext().getState(
+//                                new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+//                    }
+//
+//                }
+//               );
+        flowStream.keyBy(new KeySelector<FlowObservation, Tuple2<String, Integer>>() {
+            @Override
+            public Tuple2<String, Integer> getKey(FlowObservation value) throws Exception {
+                return Tuple2.of(value.measurementId, value.timestamp.intValue());
+            }
+        })
+                .flatMap(new RichFlatMapFunction<FlowObservation, Tuple1<Integer>>() {
 
-          flowStream.keyBy(x -> x.flow)
-                .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<Integer, Integer>>() {
+                             private ValueState<Integer> flowCount;
+                             @Override
+                             public void flatMap(FlowObservation value, Collector<Tuple1<Integer>> out) throws Exception {
+                                 Integer count = flowCount.value() != null ? flowCount.value() : 0;
+                                 flowCount.update(count + 1);
+                                 out.collect(new Tuple1<>(count));
+                             }
+                             @Override
+                             public void open(Configuration parameters) throws Exception {
 
-                    private ValueState<Integer> flowCount;
-                    @Override
-                    public void flatMap(FlowObservation value, Collector<Tuple2<Integer, Integer>> out) throws Exception {
-                        Integer count = flowCount.value() != null ? flowCount.value() : 0;
-                        flowCount.update(count + 1);
-                        out.collect(new Tuple2<>(value.flow, count));
-                    }
-                    @Override
-                    public void open(Configuration parameters) throws Exception {
+                                 flowCount = getRuntimeContext().getState(
+                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                             }
 
-                        flowCount = getRuntimeContext().getState(
-                                new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
-                    }
-
-                }
-               ).print();
+                         }
+                );
+//                  .print();
 //                  .keyBy(0).max(1)
 //                  .keyBy(0).window(TumblingProcessingTimeWindows.of(Time.seconds(20)))
 //                  .reduce(new ReduceFunction<Tuple2<Integer, Integer>>() {
@@ -91,7 +117,7 @@ public class Main {
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
         env.getConfig().setAutoWatermarkInterval(Integer.parseInt(flinkProperties.getProperty("auto.watermark.interval")));
         env.setBufferTimeout(Integer.parseInt(flinkProperties.getProperty("buffer.timeout")));
-        env.enableCheckpointing(Integer.parseInt(flinkProperties.getProperty("checkpoint.interval")));
+//        env.enableCheckpointing(Integer.parseInt(flinkProperties.getProperty("checkpoint.interval")));
         //env.getConfig().enableObjectReuse();
 
         return env;
