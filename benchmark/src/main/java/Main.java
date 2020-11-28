@@ -38,10 +38,10 @@ public class Main {
 //        rawStream.print();
 //        rawStream.addSink(kafkaProducer);
         DataStream<FlowObservation> flowStream = initializeSetUp.parseFlowStreams(rawStream);
+        DataStream<SpeedObservation> speedStream = initializeSetUp.parseSpeedStreams(rawStream);
 //        flowStream.addSink(kafkaProducer);
 //        flowStream.print();
-        flowObservationTestFewKeys(flowStream);
-//        DataStream<SpeedObservation> speedObservationDataStream = initializeSetUp.parseSpeedStreams(rawStream);
+        testFewKeys(flowStream, speedStream);
 //        speedObservationDataStream.print();
 //        DataStream<AggregatableObservation> aggregatableObservationDataStream = initializeSetUp.joinStreams(flowStream, speedObservationDataStream);
 //        aggregatableObservationDataStream.print();
@@ -52,8 +52,6 @@ public class Main {
     private static StreamExecutionEnvironment initFlinkEnv() {
         flinkProperties = ConfigurationUtil.loadProperties("config.properties");
         Configuration config = new Configuration();
-        //config.setString("state.backend","filesystem");
-        //config.setString("state.backend", "rocksdb");
         config.setString("state.backend", flinkProperties.getProperty("state.backend"));
         config.setString("state.backend.ndb.connectionstring", flinkProperties.getProperty("state.backend.ndb.connectionstring"));
         config.setString("state.backend.ndb.dbname", flinkProperties.getProperty("state.backend.ndb.dbname"));
@@ -108,8 +106,8 @@ public class Main {
                 );
     }
 
-    // Key by flow (31 keys))
-    private static void flowObservationTestFewKeys(DataStream<FlowObservation> flowStream) {
+    // Key by flow (31 keys)) key by speed
+    private static void testFewKeys(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream) {
         flowStream.keyBy(x -> x.flow)
                 .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<Integer, Integer>>() {
 
@@ -124,6 +122,25 @@ public class Main {
                              public void open(Configuration parameters) throws Exception {
 
                                  flowCount = getRuntimeContext().getState(
+                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                             }
+
+                         }
+                );
+        speedStream.keyBy(x -> x.speed)
+                .flatMap(new RichFlatMapFunction<SpeedObservation, Tuple2<Double, Integer>>() {
+
+                             private ValueState<Integer> speedCount;
+                             @Override
+                             public void flatMap(SpeedObservation value, Collector<Tuple2<Double, Integer>> out) throws Exception {
+                                 Integer count = speedCount.value() != null ? speedCount.value() : 0;
+                                 speedCount.update(count + 1);
+                                 out.collect(new Tuple2<>(value.speed, count));
+                             }
+                             @Override
+                             public void open(Configuration parameters) throws Exception {
+
+                                 speedCount = getRuntimeContext().getState(
                                          new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
                              }
 
