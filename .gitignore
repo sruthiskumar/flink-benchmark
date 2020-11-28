@@ -2,4 +2,7 @@
 /.idea/
 *.iml
 /benchmark/target/
+*.log
+*.csv
+*.DS_Store
 

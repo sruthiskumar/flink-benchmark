@@ -27,8 +27,7 @@ public class FlowObservation {
         this.ingestTimestamp = ingestTimestamp;
     }
 
-    public FlowObservation() {
-        new FlowObservation("String", "String", 1L, 1.0, 1.0, 1, 1, 1, 1, 1L, 1L);
+    public FlowObservation () {
     }
 
     @Override

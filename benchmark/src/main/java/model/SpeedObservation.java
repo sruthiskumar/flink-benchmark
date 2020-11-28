@@ -1,16 +1,16 @@
 package model;
 
 public class SpeedObservation {
-    private String measurementId;
-    private String internalId;
-    private Long timestamp;
-    private Double latitude;
-    private Double longitude;
-    private Double speed;
-    private Integer accuracy;
-    private Integer numLanes;
-    private Long publishTimestamp;
-    private Long ingestTimestamp;
+    public String measurementId;
+    public String internalId;
+    public Long timestamp;
+    public Double latitude;
+    public Double longitude;
+    public Double speed;
+    public Integer accuracy;
+    public Integer numLanes;
+    public Long publishTimestamp;
+    public Long ingestTimestamp;
 
     public SpeedObservation(String measurementId, String internalId, Long timestamp, Double latitude, Double longitude, Double speed, Integer accuracy, Integer numLanes, Long publishTimestamp, Long ingestTimestamp) {
         this.measurementId = measurementId;
@@ -26,7 +26,6 @@ public class SpeedObservation {
     }
 
     public SpeedObservation() {
-        new SpeedObservation("String", "String", 1L, 1.0, 1.0, 1.0, 1, 1, 1L, 1L);
     }
 
     @Override
