@@ -157,7 +157,7 @@ public class Main {
                              @Override
                              public void flatMap(FlowObservation value, Collector<Tuple2<Integer, Integer>> out) throws Exception {
                                  Integer count = flowCount.value() != null ? flowCount.value() : 0;
-                                 if (value.flow == 1140 && count > 0 && (count % 7000 == 0)) {
+                                 if (value.flow == 1140 && count > 0 && (count % 9000 == 0)) {
                                      flowCount.update(count + 1);
                                      Thread.sleep(15000);
                                      throw new FlinkRuntimeException("Exception to Recover for the key " + value.flow);
