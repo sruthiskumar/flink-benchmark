@@ -26,6 +26,7 @@ import util.DeserializationUtil;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Properties;
 
 public class InitializeSetUp {
@@ -45,8 +46,8 @@ public class InitializeSetUp {
  */
     public DataStream<Tuple3<String, String, Long>> ingestStage(StreamExecutionEnvironment env) {
         FlinkKafkaConsumer<Tuple3<String, String, Long>> kafkaSource = new FlinkKafkaConsumer(
-//                Arrays.asList(kafkaProperty.getProperty("flow.topic"), kafkaProperty.getProperty("speed.topic")),
-                kafkaProperty.getProperty("flow.topic"),
+                Arrays.asList(kafkaProperty.getProperty("flow.topic"), kafkaProperty.getProperty("speed.topic")),
+//                kafkaProperty.getProperty("flow.topic"),
                 new DeserializationUtil(), kafkaProperty);
 
         if (kafkaProperty.contains("earliest")) {
