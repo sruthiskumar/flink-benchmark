@@ -41,7 +41,8 @@ public class Main {
         DataStream<SpeedObservation> speedStream = initializeSetUp.parseSpeedStreams(rawStream);
 //        flowStream.addSink(kafkaProducer);
 //        flowStream.print();
-        flowObservationTestRecovery(flowStream, speedStream);
+//        flowObservationTestRecovery(flowStream, speedStream);
+        testFewKeys(flowStream, speedStream);
 //        speedObservationDataStream.print();
 //        DataStream<AggregatableObservation> aggregatableObservationDataStream = initializeSetUp.joinStreams(flowStream, speedObservationDataStream);
 //        aggregatableObservationDataStream.print();
