@@ -58,8 +58,13 @@ public class Main {
         config.setString("state.backend.ndb.truncatetableonstart", flinkProperties.getProperty("state.backend.ndb.truncatetableonstart"));
 
 
-        config.setString("state.savepoints.dir", flinkProperties.getProperty("state.savepoints.dir"));
+//        config.setString("state.savepoints.dir", flinkProperties.getProperty("state.savepoints.dir"));
         config.setString("state.checkpoints.dir", flinkProperties.getProperty("state.checkpoints.dir"));
+        config.setString("fs.s3a.access.key", flinkProperties.getProperty("s3a.access-key"));
+        config.setString("fs.s3a.secret.key", flinkProperties.getProperty("s3a.secret-key"));
+        config.setString("fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider");
+        config.setString("fs.s3a.endpoint", flinkProperties.getProperty("fs.s3a.endpoint"));
+        config.setString("web.timeout", "60000");
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(config);
         env.setParallelism(Integer.parseInt(flinkProperties.getProperty("parallelism")));
