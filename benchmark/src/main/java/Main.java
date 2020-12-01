@@ -36,13 +36,13 @@ public class Main {
         DataStream<Tuple3<String, String, Long>> rawStream = initializeSetUp.ingestStage(env);
         DataStream<FlowObservation> flowStream = initializeSetUp.parseFlowStreams(rawStream);
         DataStream<SpeedObservation> speedStream = initializeSetUp.parseSpeedStreams(rawStream);
-        DataStream<AggregatableObservation> aggregatableStream = initializeSetUp.joinStreams(flowStream, speedStream);
+//        DataStream<AggregatableObservation> aggregatableStream = initializeSetUp.joinStreams(flowStream, speedStream);
         switch (flinkProperties.getProperty("testnumber")) {
             case "1":
-                flowObservationTest(flowStream, speedStream, aggregatableStream);
+                flowObservationTest(flowStream, speedStream);
                 break;
             case "2":
-                flowObservationTestRecovery(flowStream, speedStream, aggregatableStream);
+                flowObservationTestRecovery(flowStream, speedStream);
                 break;
             case "3":
                 testFewKeys(flowStream);
@@ -111,8 +111,7 @@ public class Main {
                 );
     }
 
-    private static void flowObservationTest(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream,
-                                            DataStream<AggregatableObservation> aggregatableStream) {
+    private static void flowObservationTest(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream) {
         flowStream.keyBy(x -> x.flow)
                 .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<FlowObservation, Integer>>() {
 
@@ -135,13 +134,12 @@ public class Main {
                          }
                 );
 
-        dataProcessing(speedStream, aggregatableStream);
+        dataProcessing(speedStream);
     }
 
 
     // Key by flow (31 keys))
-    private static void flowObservationTestRecovery(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream,
-                                                    DataStream<AggregatableObservation> aggregatableStream) {
+    private static void flowObservationTestRecovery(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream) {
         flowStream.keyBy(x -> x.flow)
                 .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<FlowObservation, Integer>>() {
 
@@ -169,10 +167,10 @@ public class Main {
                          }
                 );
 
-        dataProcessing(speedStream, aggregatableStream);
+        dataProcessing(speedStream);
     }
 
-    private static void dataProcessing(DataStream<SpeedObservation> speedStream, DataStream<AggregatableObservation> aggregatableStream) {
+    private static void dataProcessing(DataStream<SpeedObservation> speedStream) {
         speedStream.keyBy(x -> x.speed)
                 .flatMap(new RichFlatMapFunction<SpeedObservation, Tuple2<SpeedObservation, Integer>>() {
 
@@ -194,26 +192,5 @@ public class Main {
 
                          }
                 );
-        aggregatableStream.keyBy(new KeySelector<AggregatableObservation, Tuple2<Integer, Double>>() {
-            @Override
-            public Tuple2<Integer, Double> getKey(AggregatableObservation aggregatableObservation) throws Exception {
-                return Tuple2.of(aggregatableObservation.accumulatedFlow, aggregatableObservation.averageSpeed);
-            }
-        }).flatMap(new RichFlatMapFunction<AggregatableObservation, Tuple2<AggregatableObservation, Integer>>() {
-            private ValueState<Integer> aggregareCount;
-
-            @Override
-            public void flatMap(AggregatableObservation value, Collector<Tuple2<AggregatableObservation, Integer>> out) throws Exception {
-                Integer count = aggregareCount.value() != null ? aggregareCount.value() : 0;
-                aggregareCount.update(count + 1);
-                out.collect(new Tuple2<>(value, count));
-            }
-
-            @Override
-            public void open(Configuration parameters) throws Exception {
-                aggregareCount = getRuntimeContext().getState(
-                        new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
-            }
-        });
     }
 }
