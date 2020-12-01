@@ -44,8 +44,8 @@ public class Main {
             case "2":
                 flowObservationTestRecovery(flowStream, speedStream, aggregatableStream);
                 break;
-            default:
-                testFewKeys(flowStream, speedStream, aggregatableStream);
+            case "3":
+                testFewKeys(flowStream);
                 break;
         }
         env.execute("Flink Traffic Analyzer");
@@ -87,8 +87,7 @@ public class Main {
     }
 
     // Key by flow (31 keys)) key by speed
-    private static void testFewKeys(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream,
-                                    DataStream<AggregatableObservation> aggregatableStream) {
+    private static void testFewKeys(DataStream<FlowObservation> flowStream) {
         flowStream.keyBy(x -> x.flow)
                 .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<Integer, Integer>>() {
 
@@ -110,7 +109,6 @@ public class Main {
 
                          }
                 );
-        dataProcessing(speedStream, aggregatableStream);
     }
 
     private static void flowObservationTest(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream,
