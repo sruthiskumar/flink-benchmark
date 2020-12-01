@@ -6,7 +6,6 @@ import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.java.functions.KeySelector;
-import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.streaming.api.TimeCharacteristic;
@@ -35,18 +34,20 @@ public class Main {
                 new SerializationUtil(), kafkaProperties, AT_LEAST_ONCE);
 
         DataStream<Tuple3<String, String, Long>> rawStream = initializeSetUp.ingestStage(env);
-//        rawStream.print();
-//        rawStream.addSink(kafkaProducer);
         DataStream<FlowObservation> flowStream = initializeSetUp.parseFlowStreams(rawStream);
         DataStream<SpeedObservation> speedStream = initializeSetUp.parseSpeedStreams(rawStream);
-//        flowStream.addSink(kafkaProducer);
-//        flowStream.print();
-//        flowObservationTestRecovery(flowStream, speedStream);
-        testFewKeys(flowStream, speedStream);
-//        speedObservationDataStream.print();
-//        DataStream<AggregatableObservation> aggregatableObservationDataStream = initializeSetUp.joinStreams(flowStream, speedObservationDataStream);
-//        aggregatableObservationDataStream.print();
-//        flowObservationTest3(aggregatableObservationDataStream);
+        DataStream<AggregatableObservation> aggregatableStream = initializeSetUp.joinStreams(flowStream, speedStream);
+        switch (flinkProperties.getProperty("testnumber")) {
+            case "1":
+                flowObservationTest(flowStream, speedStream, aggregatableStream);
+                break;
+            case "2":
+                flowObservationTestRecovery(flowStream, speedStream, aggregatableStream);
+                break;
+            default:
+                testFewKeys(flowStream, speedStream, aggregatableStream);
+                break;
+        }
         env.execute("Flink Traffic Analyzer");
     }
 
@@ -59,7 +60,7 @@ public class Main {
         config.setString("state.backend.ndb.truncatetableonstart", flinkProperties.getProperty("state.backend.ndb.truncatetableonstart"));
 
 
-//        config.setString("state.savepoints.dir", flinkProperties.getProperty("state.savepoints.dir"));
+        config.setString("state.savepoints.dir", flinkProperties.getProperty("state.savepoints.dir"));
         config.setString("state.checkpoints.dir", flinkProperties.getProperty("state.checkpoints.dir"));
         config.setString("fs.s3a.access.key", flinkProperties.getProperty("s3a.access-key"));
         config.setString("fs.s3a.secret.key", flinkProperties.getProperty("s3a.secret-key"));
@@ -85,45 +86,21 @@ public class Main {
         return kafkaProperty;
     }
 
-    private static void flowObservationTest1(DataStream<FlowObservation> flowStream) {
-        flowStream.keyBy(new KeySelector<FlowObservation, Tuple2<String, Integer>>() {
-            @Override
-            public Tuple2<String, Integer> getKey(FlowObservation value) {
-                return Tuple2.of(value.measurementId, value.timestamp.intValue());
-            }
-        })
-                .flatMap(new RichFlatMapFunction<FlowObservation, Tuple1<Integer>>() {
-
-                             private ValueState<Integer> flowCount;
-                             @Override
-                             public void flatMap(FlowObservation value, Collector<Tuple1<Integer>> out) throws Exception {
-                                 Integer count = flowCount.value() != null ? flowCount.value() : 0;
-                                 flowCount.update(count + 1);
-                                 out.collect(new Tuple1<>(count));
-                             }
-                             @Override
-                             public void open(Configuration parameters) throws Exception {
-
-                                 flowCount = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
-                             }
-
-                         }
-                );
-    }
-
     // Key by flow (31 keys)) key by speed
-    private static void testFewKeys(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream) {
+    private static void testFewKeys(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream,
+                                    DataStream<AggregatableObservation> aggregatableStream) {
         flowStream.keyBy(x -> x.flow)
                 .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<Integer, Integer>>() {
 
                              private ValueState<Integer> flowCount;
+
                              @Override
                              public void flatMap(FlowObservation value, Collector<Tuple2<Integer, Integer>> out) throws Exception {
                                  Integer count = flowCount.value() != null ? flowCount.value() : 0;
                                  flowCount.update(count + 1);
                                  out.collect(new Tuple2<>(value.flow, count));
                              }
+
                              @Override
                              public void open(Configuration parameters) throws Exception {
 
@@ -133,45 +110,57 @@ public class Main {
 
                          }
                 );
-        speedStream.keyBy(x -> x.speed)
-                .flatMap(new RichFlatMapFunction<SpeedObservation, Tuple2<Double, Integer>>() {
+        dataProcessing(speedStream, aggregatableStream);
+    }
 
-                             private ValueState<Integer> speedCount;
+    private static void flowObservationTest(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream,
+                                            DataStream<AggregatableObservation> aggregatableStream) {
+        flowStream.keyBy(x -> x.flow)
+                .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<FlowObservation, Integer>>() {
+
+                             private ValueState<Integer> flowCount;
+
                              @Override
-                             public void flatMap(SpeedObservation value, Collector<Tuple2<Double, Integer>> out) throws Exception {
-                                 Integer count = speedCount.value() != null ? speedCount.value() : 0;
-                                 speedCount.update(count + 1);
-                                 out.collect(new Tuple2<>(value.speed, count));
+                             public void flatMap(FlowObservation value, Collector<Tuple2<FlowObservation, Integer>> out) throws Exception {
+                                 Integer count = flowCount.value() != null ? flowCount.value() : 0;
+                                 flowCount.update(count + 1);
+                                 out.collect(new Tuple2<>(value, count));
                              }
+
                              @Override
                              public void open(Configuration parameters) throws Exception {
 
-                                 speedCount = getRuntimeContext().getState(
+                                 flowCount = getRuntimeContext().getState(
                                          new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
                              }
 
                          }
                 );
+
+        dataProcessing(speedStream, aggregatableStream);
     }
 
+
     // Key by flow (31 keys))
-    private static void flowObservationTestRecovery(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream) {
+    private static void flowObservationTestRecovery(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream,
+                                                    DataStream<AggregatableObservation> aggregatableStream) {
         flowStream.keyBy(x -> x.flow)
-                .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<Integer, Integer>>() {
+                .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<FlowObservation, Integer>>() {
 
                              private ValueState<Integer> flowCount;
+
                              @Override
-                             public void flatMap(FlowObservation value, Collector<Tuple2<Integer, Integer>> out) throws Exception {
+                             public void flatMap(FlowObservation value, Collector<Tuple2<FlowObservation, Integer>> out) throws Exception {
                                  Integer count = flowCount.value() != null ? flowCount.value() : 0;
-                                 if (value.flow == 1140 && count > 0 && (count % 9000 == 0)) {
+                                 if (value.flow == 1140 && count > 0 && (count % (Integer.getInteger(flinkProperties.getProperty("recoveryvalue"))) == 0)) {
                                      flowCount.update(count + 1);
                                      Thread.sleep(15000);
                                      throw new FlinkRuntimeException("Exception to Recover for the key " + value.flow);
                                  }
-
                                  flowCount.update(count + 1);
-                                 out.collect(new Tuple2<>(value.flow, count));
+                                 out.collect(new Tuple2<>(value, count));
                              }
+
                              @Override
                              public void open(Configuration parameters) throws Exception {
 
@@ -182,16 +171,22 @@ public class Main {
                          }
                 );
 
+        dataProcessing(speedStream, aggregatableStream);
+    }
+
+    private static void dataProcessing(DataStream<SpeedObservation> speedStream, DataStream<AggregatableObservation> aggregatableStream) {
         speedStream.keyBy(x -> x.speed)
-                .flatMap(new RichFlatMapFunction<SpeedObservation, Tuple2<Double, Integer>>() {
+                .flatMap(new RichFlatMapFunction<SpeedObservation, Tuple2<SpeedObservation, Integer>>() {
 
                              private ValueState<Integer> speedCount;
+
                              @Override
-                             public void flatMap(SpeedObservation value, Collector<Tuple2<Double, Integer>> out) throws Exception {
+                             public void flatMap(SpeedObservation value, Collector<Tuple2<SpeedObservation, Integer>> out) throws Exception {
                                  Integer count = speedCount.value() != null ? speedCount.value() : 0;
                                  speedCount.update(count + 1);
-                                 out.collect(new Tuple2<>(value.speed, count));
+                                 out.collect(new Tuple2<>(value, count));
                              }
+
                              @Override
                              public void open(Configuration parameters) throws Exception {
 
@@ -201,31 +196,26 @@ public class Main {
 
                          }
                 );
-    }
-
-    private static void flowObservationTest3(DataStream<AggregatableObservation> observationDataStream) {
-        observationDataStream.keyBy(new KeySelector<AggregatableObservation, Tuple2<String, Long>>() {
+        aggregatableStream.keyBy(new KeySelector<AggregatableObservation, Tuple2<Integer, Double>>() {
             @Override
-            public Tuple2<String, Long> getKey(AggregatableObservation value) throws Exception {
-                return Tuple2.of(value.measurementId, value.timestamp);
+            public Tuple2<Integer, Double> getKey(AggregatableObservation aggregatableObservation) throws Exception {
+                return Tuple2.of(aggregatableObservation.accumulatedFlow, aggregatableObservation.averageSpeed);
             }
-        }).flatMap(new RichFlatMapFunction<AggregatableObservation, Tuple1<Integer>>() {
+        }).flatMap(new RichFlatMapFunction<AggregatableObservation, Tuple2<AggregatableObservation, Integer>>() {
+            private ValueState<Integer> aggregareCount;
 
-                             private ValueState<Integer> flowCount;
-                             @Override
-                             public void flatMap(AggregatableObservation value, Collector<Tuple1<Integer>> out) throws Exception {
-                                 Integer count = flowCount.value() != null ? flowCount.value() : 0;
-                                 flowCount.update(count + 1);
-                                 out.collect(new Tuple1<>(count));
-                             }
-                             @Override
-                             public void open(Configuration parameters) throws Exception {
+            @Override
+            public void flatMap(AggregatableObservation value, Collector<Tuple2<AggregatableObservation, Integer>> out) throws Exception {
+                Integer count = aggregareCount.value() != null ? aggregareCount.value() : 0;
+                aggregareCount.update(count + 1);
+                out.collect(new Tuple2<>(value, count));
+            }
 
-                                 flowCount = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
-                             }
-
-                         }
-                );
+            @Override
+            public void open(Configuration parameters) throws Exception {
+                aggregareCount = getRuntimeContext().getState(
+                        new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+            }
+        });
     }
 }
