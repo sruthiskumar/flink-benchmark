@@ -50,6 +50,8 @@ public class Main {
                 break;
             case "4":
                 testLargeState(flowStream, speedStream);
+            case "5":
+                testLargeStateRecovery(flowStream, speedStream);
         }
         env.execute("Flink Traffic Analyzer");
     }
@@ -252,4 +254,65 @@ public class Main {
                          }
                 );
     }
+    private static void testLargeStateRecovery(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream) {
+        flowStream.keyBy(new KeySelector<FlowObservation, Integer>() {
+            @Override
+            public Integer getKey(FlowObservation flowObservation) throws Exception {
+                Date time = new Date(flowObservation.timestamp);
+                return time.getSeconds()*flowObservation.flow;
+            }
+        })
+                .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<FlowObservation, Integer>>() {
+
+                             private ValueState<Integer> flowCount;
+
+                             @Override
+                             public void flatMap(FlowObservation value, Collector<Tuple2<FlowObservation, Integer>> out) throws Exception {
+                                 Integer count = flowCount.value() != null ? flowCount.value() : 0;
+                                 if ((new Date(value.timestamp).getSeconds() * value.flow) == 47940 &&
+                                         count > 0 && (count % 335) == 0) {
+                                     flowCount.update(count + 1);
+                                     throw new FlinkRuntimeException("Exception to Recover for the key " + value.flow);
+                                 }
+                                 flowCount.update(count + 1);
+                                 out.collect(new Tuple2<>(value, count));
+                             }
+
+                             @Override
+                             public void open(Configuration parameters) throws Exception {
+
+                                 flowCount = getRuntimeContext().getState(
+                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                             }
+
+                         }
+                );
+        speedStream.keyBy(new KeySelector<SpeedObservation, Long>() {
+            @Override
+            public Long getKey(SpeedObservation speedObservation) throws Exception {
+                return speedObservation.timestamp % 1000;
+            }
+        })
+                .flatMap(new RichFlatMapFunction<SpeedObservation, Tuple2<SpeedObservation, Integer>>() {
+
+                             private ValueState<Integer> speedCount;
+
+                             @Override
+                             public void flatMap(SpeedObservation value, Collector<Tuple2<SpeedObservation, Integer>> out) throws Exception {
+                                 Integer count = speedCount.value() != null ? speedCount.value() : 0;
+                                 speedCount.update(count + 1);
+                                 out.collect(new Tuple2<>(value, count));
+                             }
+
+                             @Override
+                             public void open(Configuration parameters) throws Exception {
+
+                                 speedCount = getRuntimeContext().getState(
+                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                             }
+
+                         }
+                );
+    }
+
 }
