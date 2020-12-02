@@ -98,6 +98,7 @@ public class InitializeSetUp {
                         jsonObject.get("num_lanes").getAsInt(),
                         value.f2,
                         Instant.now().toEpochMilli());
+                flowObservation.setDummyArray();
                 return flowObservation;
             }
         });
@@ -128,6 +129,7 @@ public class InitializeSetUp {
                                 jsonObject.get("num_lanes").getAsInt(),
                                 value.f2,
                                 Instant.now().toEpochMilli());
+                        speedObservation.setDummyArray();
                         return speedObservation;
                     }
                 });

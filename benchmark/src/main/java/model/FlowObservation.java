@@ -13,6 +13,19 @@ public class FlowObservation {
     public Long publishTimestamp;
     public Long ingestTimestamp;
 
+    public Long[] getDummyArray() {
+        return dummyArray;
+    }
+
+    public void setDummyArray() {
+        this.dummyArray = new Long[5000];
+        for(int i = 0; i < 5000; i++) {
+            this.dummyArray[i] = Long.valueOf(i);
+        }
+    }
+
+    public Long[] dummyArray;
+
     public FlowObservation(String measurementId, String internalId, Long timestamp, Double latitude, Double longitude, Integer flow, Integer period, Integer accuracy, Integer numLanes, Long publishTimestamp, Long ingestTimestamp) {
         this.measurementId = measurementId;
         this.internalId = internalId;
