@@ -18,6 +18,7 @@ import org.apache.flink.util.FlinkRuntimeException;
 import util.ConfigurationUtil;
 import util.SerializationUtil;
 
+import java.util.Date;
 import java.util.Properties;
 
 import static org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer.Semantic.AT_LEAST_ONCE;
@@ -54,10 +55,11 @@ public class Main {
     }
 
     private static void testLargeState(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream) {
-        flowStream.keyBy(new KeySelector<FlowObservation, Long>() {
+        flowStream.keyBy(new KeySelector<FlowObservation, Integer>() {
             @Override
-            public Long getKey(FlowObservation flowObservation) throws Exception {
-                return flowObservation.timestamp % 1000;
+            public Integer getKey(FlowObservation flowObservation) throws Exception {
+                Date time = new Date(flowObservation.timestamp);
+                return time.getSeconds()*flowObservation.flow;
             }
         })
                 .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<FlowObservation, Integer>>() {
