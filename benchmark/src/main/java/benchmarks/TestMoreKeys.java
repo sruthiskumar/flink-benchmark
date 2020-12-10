@@ -18,6 +18,7 @@ import java.util.Date;
 import java.util.Properties;
 
 public class TestMoreKeys {
+
     private static Properties flinkProperties = ConfigurationUtil.loadProperties("config.properties");
 
     public static void getKeys(DataStream<FlowObservation> flowStream) {
@@ -58,12 +59,14 @@ public class TestMoreKeys {
         })
                 .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<FlowObservation, Integer>>() {
 
-                             private ValueState<Integer> flowCount;
+                             private ValueState<FlowObservation> flowCount;
 
                              @Override
                              public void flatMap(FlowObservation value, Collector<Tuple2<FlowObservation, Integer>> out) throws Exception {
-                                 Integer count = flowCount.value() != null ? flowCount.value() : 0;
-                                 flowCount.update(count + 1);
+                                 FlowObservation flowObservation = flowCount.value();
+                                 Integer count = flowObservation.count != null ? flowObservation.count : 0;
+                                 flowObservation.setCount(count + 1);
+
                                  out.collect(new Tuple2<>(value, count));
                              }
 
@@ -71,7 +74,7 @@ public class TestMoreKeys {
                              public void open(Configuration parameters) throws Exception {
 
                                  flowCount = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                                         new ValueStateDescriptor<FlowObservation>("ValueState", FlowObservation.class));
                              }
 
                          }

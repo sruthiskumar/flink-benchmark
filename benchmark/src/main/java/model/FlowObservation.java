@@ -12,6 +12,15 @@ public class FlowObservation {
     public Integer numLanes;
     public Long publishTimestamp;
     public Long ingestTimestamp;
+    public Integer count;
+
+    public Integer getCount() {
+        return count;
+    }
+
+    public void setCount(Integer count) {
+        this.count = count;
+    }
 
     public Long[] getDummyArray() {
         return dummyArray;
