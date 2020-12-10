@@ -60,21 +60,21 @@ public class TestMoreKeys {
                 .flatMap(new RichFlatMapFunction<FlowObservation, FlowObservation>() {
 
                     private ValueState<Integer> flowCount;
-                    private ValueState<FlowObservation> flowObservationCount;
+                    private ValueState<FlowObservation> flowObservationValueState;
 
                              @Override
                              public void flatMap(FlowObservation value, Collector<FlowObservation> out) throws Exception {
                                  Integer count = flowCount.value() != null ? flowCount.value() : 0;
                                  flowCount.update(count + 1);
-                                 if (flowObservationCount.value() != null) {
-                                     FlowObservation flowObservation = flowObservationCount.value();
+                                 if (flowObservationValueState.value() != null) {
+                                     FlowObservation flowObservation = flowObservationValueState.value();
                                      Integer count1 = flowObservation.count != null ? flowObservation.count : 0;
                                      flowObservation.setCount(count1 + 1);
-                                     flowObservationCount.update(flowObservation);
+                                     flowObservationValueState.update(flowObservation);
                                      out.collect(flowObservation);
                                  } else {
                                      value.setCount(1);
-                                     flowObservationCount.update(value);
+                                     flowObservationValueState.update(value);
                                      out.collect(value);
                                  }
                              }
@@ -84,7 +84,7 @@ public class TestMoreKeys {
                                  flowCount = getRuntimeContext().getState(
                                          new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
 
-                                 flowObservationCount = getRuntimeContext().getState(
+                                 flowObservationValueState = getRuntimeContext().getState(
                                          new ValueStateDescriptor<FlowObservation>("ValueState", FlowObservation.class));
                              }
 
