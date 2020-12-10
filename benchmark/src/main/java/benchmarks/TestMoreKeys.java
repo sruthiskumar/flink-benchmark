@@ -92,7 +92,7 @@ public class TestMoreKeys {
                              @Override
                              public void flatMap(FlowObservation value, Collector<Tuple2<FlowObservation, Integer>> out) throws Exception {
                                  Integer count = flowCount.value() != null ? flowCount.value() : 0;
-                                 if (value.flow == Integer.parseInt(flinkProperties.getProperty("recovery.key")) && count > 0
+                                 if (value.timestamp.intValue() == Integer.parseInt(flinkProperties.getProperty("recovery.key")) && count > 0
                                          && (count % Integer.parseInt(flinkProperties.getProperty("recovery.value"))) == 0) {
                                      flowCount.update(count + 1);
                                      throw new FlinkRuntimeException("Exception to Recover for the key " + value.flow);
