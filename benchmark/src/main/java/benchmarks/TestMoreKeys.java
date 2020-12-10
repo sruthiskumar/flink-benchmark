@@ -59,27 +59,32 @@ public class TestMoreKeys {
         })
                 .flatMap(new RichFlatMapFunction<FlowObservation, FlowObservation>() {
 
-                             private ValueState<FlowObservation> flowCount;
+                    private ValueState<Integer> flowCount;
+                    private ValueState<FlowObservation> flowObservationCount;
 
                              @Override
                              public void flatMap(FlowObservation value, Collector<FlowObservation> out) throws Exception {
-                                 if (flowCount.value() != null) {
-                                     FlowObservation flowObservation = flowCount.value();
-                                     Integer count = flowObservation.count != null ? flowObservation.count : 0;
-                                     flowObservation.setCount(count + 1);
-                                     flowCount.update(flowObservation);
+                                 Integer count = flowCount.value() != null ? flowCount.value() : 0;
+                                 flowCount.update(count + 1);
+                                 if (flowObservationCount.value() != null) {
+                                     FlowObservation flowObservation = flowObservationCount.value();
+                                     Integer count1 = flowObservation.count != null ? flowObservation.count : 0;
+                                     flowObservation.setCount(count1 + 1);
+                                     flowObservationCount.update(flowObservation);
                                      out.collect(flowObservation);
                                  } else {
                                      value.setCount(1);
-                                     flowCount.update(value);
+                                     flowObservationCount.update(value);
                                      out.collect(value);
                                  }
                              }
 
                              @Override
                              public void open(Configuration parameters) throws Exception {
-
                                  flowCount = getRuntimeContext().getState(
+                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+
+                                 flowObservationCount = getRuntimeContext().getState(
                                          new ValueStateDescriptor<FlowObservation>("ValueState", FlowObservation.class));
                              }
 
