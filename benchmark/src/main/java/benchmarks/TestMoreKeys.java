@@ -85,7 +85,7 @@ public class TestMoreKeys {
                                          new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
 
                                  flowObservationValueState = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<FlowObservation>("ValueState", FlowObservation.class));
+                                         new ValueStateDescriptor<FlowObservation>("FowObservationValueState", FlowObservation.class));
                              }
 
                          }
