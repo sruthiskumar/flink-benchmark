@@ -57,17 +57,23 @@ public class TestMoreKeys {
                 return flowObservation.timestamp.intValue();
             }
         })
-                .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<FlowObservation, Integer>>() {
+                .flatMap(new RichFlatMapFunction<FlowObservation, FlowObservation>() {
 
                              private ValueState<FlowObservation> flowCount;
 
                              @Override
-                             public void flatMap(FlowObservation value, Collector<Tuple2<FlowObservation, Integer>> out) throws Exception {
-                                 FlowObservation flowObservation = flowCount.value();
-                                 Integer count = flowObservation.count != null ? flowObservation.count : 0;
-                                 flowObservation.setCount(count + 1);
-
-                                 out.collect(new Tuple2<>(value, count));
+                             public void flatMap(FlowObservation value, Collector<FlowObservation> out) throws Exception {
+                                 if (flowCount.value() != null) {
+                                     FlowObservation flowObservation = flowCount.value();
+                                     Integer count = flowObservation.count != null ? flowObservation.count : 0;
+                                     flowObservation.setCount(count + 1);
+                                     flowCount.update(flowObservation);
+                                     out.collect(flowObservation);
+                                 } else {
+                                     value.setCount(1);
+                                     flowCount.update(value);
+                                     out.collect(value);
+                                 }
                              }
 
                              @Override
