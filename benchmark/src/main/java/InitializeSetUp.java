@@ -99,6 +99,7 @@ public class InitializeSetUp {
                         value.f2,
                         Instant.now().toEpochMilli());
                 flowObservation.setDummyArray();
+                flowObservation.setCount(0);
                 return flowObservation;
             }
         });
