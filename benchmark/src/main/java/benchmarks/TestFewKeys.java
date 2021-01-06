@@ -49,11 +49,21 @@ public class TestFewKeys {
                 .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<FlowObservation, Integer>>() {
 
                              private ValueState<Integer> flowCount;
+                             private ValueState<FlowObservation> flowObservationValueState;
 
                              @Override
                              public void flatMap(FlowObservation value, Collector<Tuple2<FlowObservation, Integer>> out) throws Exception {
                                  Integer count = flowCount.value() != null ? flowCount.value() : 0;
                                  flowCount.update(count + 1);
+                                 if (flowObservationValueState.value() != null) {
+                                     FlowObservation flowObservation = flowObservationValueState.value();
+                                     Integer count1 = flowObservation.count != null ? flowObservation.count : 0;
+                                     flowObservation.setCount(count1 + 1);
+                                     flowObservationValueState.update(flowObservation);
+                                 } else {
+                                     value.setCount(1);
+                                     flowObservationValueState.update(value);
+                                 }
                                  out.collect(new Tuple2<>(value, count));
                              }
 
@@ -62,6 +72,9 @@ public class TestFewKeys {
 
                                  flowCount = getRuntimeContext().getState(
                                          new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                                 flowObservationValueState = getRuntimeContext().getState(
+                                         new ValueStateDescriptor<FlowObservation>("FowObservationValueState", FlowObservation.class));
+
                              }
 
                          }
@@ -98,14 +111,25 @@ public class TestFewKeys {
                 .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<FlowObservation, Integer>>() {
 
                              private ValueState<Integer> flowCount;
+                             private ValueState<FlowObservation> flowObservationValueState;
 
-                             @Override
+
+                    @Override
                              public void flatMap(FlowObservation value, Collector<Tuple2<FlowObservation, Integer>> out) throws Exception {
                                  Integer count = flowCount.value() != null ? flowCount.value() : 0;
                                  if (value.flow == Integer.parseInt(flinkProperties.getProperty("recovery.key")) && count > 0
                                          && (count % Integer.parseInt(flinkProperties.getProperty("recovery.value"))) == 0) {
                                      flowCount.update(count + 1);
                                      throw new FlinkRuntimeException("Exception to Recover for the key " + value.flow);
+                                 }
+                                 if (flowObservationValueState.value() != null) {
+                                     FlowObservation flowObservation = flowObservationValueState.value();
+                                     Integer count1 = flowObservation.count != null ? flowObservation.count : 0;
+                                     flowObservation.setCount(count1 + 1);
+                                     flowObservationValueState.update(flowObservation);
+                                 } else {
+                                     value.setCount(1);
+                                     flowObservationValueState.update(value);
                                  }
                                  flowCount.update(count + 1);
                                  out.collect(new Tuple2<>(value, count));
@@ -116,6 +140,8 @@ public class TestFewKeys {
 
                                  flowCount = getRuntimeContext().getState(
                                          new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                                 flowObservationValueState = getRuntimeContext().getState(
+                                         new ValueStateDescriptor<FlowObservation>("FowObservationValueState", FlowObservation.class));
                              }
 
                          }
