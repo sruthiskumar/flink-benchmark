@@ -43,7 +43,7 @@ public class TestMoreKeys {
                              public void open(Configuration parameters) throws Exception {
 
                                  flowCount = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                                         new ValueStateDescriptor<Integer>("TestMoreKeysGetKeys", BasicTypeInfo.INT_TYPE_INFO));
                              }
 
                          }
@@ -82,10 +82,10 @@ public class TestMoreKeys {
                              @Override
                              public void open(Configuration parameters) throws Exception {
                                  flowCount = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                                         new ValueStateDescriptor<Integer>("TestMoreKeysTest", BasicTypeInfo.INT_TYPE_INFO));
 
                                  flowObservationValueState = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<FlowObservation>("FowObservationValueState", FlowObservation.class));
+                                         new ValueStateDescriptor<FlowObservation>("TestMoreKeysTestFlowObservationValueState", FlowObservation.class));
                              }
 
                          }
@@ -130,10 +130,10 @@ public class TestMoreKeys {
                              public void open(Configuration parameters) throws Exception {
 
                                  flowCount = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                                         new ValueStateDescriptor<Integer>("TestMoreKeysRecovery", BasicTypeInfo.INT_TYPE_INFO));
 
                                  flowObservationValueState = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<FlowObservation>("FowObservationValueState", FlowObservation.class));
+                                         new ValueStateDescriptor<FlowObservation>("TestMoreKeysRecoveryFlowObservationValueState", FlowObservation.class));
                              }
 
                          }
@@ -164,7 +164,7 @@ public class TestMoreKeys {
                              public void open(Configuration parameters) throws Exception {
 
                                  speedCount = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                                         new ValueStateDescriptor<Integer>("TestMoreKeysSpeed", BasicTypeInfo.INT_TYPE_INFO));
                              }
 
                          }

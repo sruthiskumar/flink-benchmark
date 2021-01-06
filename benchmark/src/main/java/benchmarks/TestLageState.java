@@ -44,7 +44,7 @@ public class TestLageState {
                              public void open(Configuration parameters) throws Exception {
 
                                  flowCount = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                                         new ValueStateDescriptor<Integer>("TestLageStateGetKeys", BasicTypeInfo.INT_TYPE_INFO));
                              }
 
                          }
@@ -74,7 +74,7 @@ public class TestLageState {
                              public void open(Configuration parameters) throws Exception {
 
                                  flowCount = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                                         new ValueStateDescriptor<Integer>("TestLageStateTest", BasicTypeInfo.INT_TYPE_INFO));
                              }
 
                          }
@@ -104,7 +104,7 @@ public class TestLageState {
                              public void open(Configuration parameters) throws Exception {
 
                                  speedCount = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                                         new ValueStateDescriptor<Integer>("TestLageStateSpeed", BasicTypeInfo.INT_TYPE_INFO));
                              }
 
                          }
@@ -139,7 +139,7 @@ public class TestLageState {
                              public void open(Configuration parameters) throws Exception {
 
                                  flowCount = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<Integer>("ValueState", BasicTypeInfo.INT_TYPE_INFO));
+                                         new ValueStateDescriptor<Integer>("TestLageStateRecovery", BasicTypeInfo.INT_TYPE_INFO));
                              }
 
                          }
