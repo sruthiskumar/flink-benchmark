@@ -46,25 +46,15 @@ public class TestFewKeys {
 
     public static void test(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream) {
         flowStream.keyBy(x -> x.flow)
-                .flatMap(new RichFlatMapFunction<FlowObservation, FlowObservation>() {
+                .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<FlowObservation, Integer>>() {
 
                              private ValueState<Integer> flowCount;
-                             private ValueState<FlowObservation> flowObservationValueState;
 
                              @Override
-                             public void flatMap(FlowObservation value, Collector<FlowObservation> out) throws Exception {
+                             public void flatMap(FlowObservation value, Collector<Tuple2<FlowObservation, Integer>> out) throws Exception {
                                  Integer count = flowCount.value() != null ? flowCount.value() : 0;
                                  flowCount.update(count + 1);
-                                 if (flowObservationValueState.value() != null) {
-                                     FlowObservation flowObservation = flowObservationValueState.value();
-                                     Integer count1 = flowObservation.count != null ? flowObservation.count : 0;
-                                     flowObservation.setCount(count1 + 1);
-                                     flowObservationValueState.update(flowObservation);
-                                 } else {
-                                     value.setCount(1);
-                                     flowObservationValueState.update(value);
-                                 }
-                                 out.collect(value);
+                                 out.collect(new Tuple2<>(value, count));
                              }
 
                              @Override
@@ -72,6 +62,40 @@ public class TestFewKeys {
 
                                  flowCount = getRuntimeContext().getState(
                                          new ValueStateDescriptor<Integer>("TestFewKeysTest", BasicTypeInfo.INT_TYPE_INFO));
+                             }
+
+                         }
+                );
+        largeState(flowStream);
+        processSpeedStream(speedStream);
+    }
+
+    public static void largeState(DataStream<FlowObservation> flowStream) {
+        flowStream.keyBy(x -> x.flow)
+                .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<FlowObservation, Integer>>() {
+
+                             private ValueState<FlowObservation> flowObservationValueState;
+
+                             @Override
+                             public void flatMap(FlowObservation value, Collector<Tuple2<FlowObservation, Integer>> out) throws Exception {
+                                 Integer count1;
+                                 if (flowObservationValueState.value() != null) {
+                                     FlowObservation flowObservation = flowObservationValueState.value();
+                                     count1 = flowObservation.count != null ? flowObservation.count : 0;
+                                     count1++;
+                                     flowObservation.setCount(count1 + 1);
+                                     flowObservationValueState.update(flowObservation);
+                                 } else {
+                                     count1 = 1;
+                                     value.setCount(count1);
+                                     flowObservationValueState.update(value);
+                                 }
+                                 out.collect(new Tuple2<>(value, count1));
+                             }
+
+                             @Override
+                             public void open(Configuration parameters) throws Exception {
+
                                  flowObservationValueState = getRuntimeContext().getState(
                                          new ValueStateDescriptor<FlowObservation>("TestFewKeysTestFlowObservationValueState", FlowObservation.class));
 
@@ -79,9 +103,7 @@ public class TestFewKeys {
 
                          }
                 );
-        processSpeedStream(speedStream);
     }
-
     private static void processSpeedStream(DataStream<SpeedObservation> speedStream) {
         speedStream.keyBy(x -> x.speed)
                 .flatMap(new RichFlatMapFunction<SpeedObservation, Tuple2<SpeedObservation, Integer>>() {
