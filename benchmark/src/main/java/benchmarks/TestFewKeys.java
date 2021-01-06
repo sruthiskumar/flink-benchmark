@@ -74,14 +74,15 @@ public class TestFewKeys {
                                      FlowObservation flowObservation = flowObservationValueState.value();
                                      count1 = flowObservation.count != null ? flowObservation.count : 0;
                                      count1++;
-                                     flowObservation.setCount(count1 + 1);
+                                     flowObservation.setCount(count1);
                                      flowObservationValueState.update(flowObservation);
+                                     out.collect(value);
                                  } else {
                                      count1 = 1;
                                      value.setCount(count1);
                                      flowObservationValueState.update(value);
+                                     out.collect(value);
                                  }
-                                 out.collect(value);
                              }
 
                              @Override
@@ -94,7 +95,7 @@ public class TestFewKeys {
                          }
                 );
         //largeState(flowStream);
-        processSpeedStream(speedStream);
+        //processSpeedStream(speedStream);
     }
 
     public static void largeState(DataStream<FlowObservation> flowStream) {
