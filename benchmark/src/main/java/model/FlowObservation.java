@@ -27,8 +27,8 @@ public class FlowObservation {
     }
 
     public void setDummyArray() {
-        this.dummyArray = new Long[100];
-        for(int i = 0; i < 100; i++) {
+        this.dummyArray = new Long[500];
+        for(int i = 0; i < 500; i++) {
             this.dummyArray[i] = Long.valueOf(i);
         }
     }

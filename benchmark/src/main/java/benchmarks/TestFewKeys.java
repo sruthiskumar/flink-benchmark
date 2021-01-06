@@ -46,29 +46,15 @@ public class TestFewKeys {
 
     public static void test(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream) {
         flowStream.keyBy(x -> x.flow)
-                .flatMap(new RichFlatMapFunction<FlowObservation, FlowObservation>() {
+                .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<FlowObservation, Integer>>() {
 
-//                             private ValueState<Integer> flowCount;
-//
-//                             @Override
-//                             public void flatMap(FlowObservation value, Collector<Tuple2<FlowObservation, Integer>> out) throws Exception {
-//                                 Integer count = flowCount.value() != null ? flowCount.value() : 0;
-//                                 flowCount.update(count + 1);
-//                                 out.collect(new Tuple2<>(value, count));
-//                             }
-//
-//                             @Override
-//                             public void open(Configuration parameters) throws Exception {
-//
-//                                 flowCount = getRuntimeContext().getState(
-//                                         new ValueStateDescriptor<Integer>("TestFewKeysTest", BasicTypeInfo.INT_TYPE_INFO));
-//                             }
-
+                             private ValueState<Integer> flowCount;
                              private ValueState<FlowObservation> flowObservationValueState;
 
                              @Override
-                             public void flatMap(FlowObservation value, Collector<FlowObservation> out) throws Exception {
-
+                             public void flatMap(FlowObservation value, Collector<Tuple2<FlowObservation, Integer>> out) throws Exception {
+                                 Integer count = flowCount.value() != null ? flowCount.value() : 0;
+                                 flowCount.update(count + 1);
                                  Integer count1;
                                  if (flowObservationValueState.value() != null) {
                                      FlowObservation flowObservation = flowObservationValueState.value();
@@ -76,58 +62,61 @@ public class TestFewKeys {
                                      count1++;
                                      flowObservation.setCount(count1);
                                      flowObservationValueState.update(flowObservation);
-                                     out.collect(value);
                                  } else {
                                      count1 = 1;
                                      value.setCount(count1);
                                      flowObservationValueState.update(value);
-                                     out.collect(value);
                                  }
+                                 out.collect(new Tuple2<>(value, count));
                              }
 
                              @Override
                              public void open(Configuration parameters) throws Exception {
 
+                                 flowCount = getRuntimeContext().getState(
+                                         new ValueStateDescriptor<Integer>("TestFewKeysTest", BasicTypeInfo.INT_TYPE_INFO));
                                  flowObservationValueState = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<FlowObservation>("TestFewKeysTest", FlowObservation.class));
+                                         new ValueStateDescriptor<FlowObservation>("TestFewKeysTestObject", FlowObservation.class));
+
                              }
 
                          }
                 );
         //largeState(flowStream);
-        //processSpeedStream(speedStream);
+        processSpeedStream(speedStream);
     }
 
     public static void largeState(DataStream<FlowObservation> flowStream) {
         flowStream.keyBy(x -> x.flow)
-                .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<FlowObservation, Integer>>() {
+                .flatMap(new RichFlatMapFunction<FlowObservation, FlowObservation>() {
 
-                             private ValueState<FlowObservation> flowObservationValueState;
+                    private ValueState<FlowObservation> flowObservationValueState;
 
-                             @Override
-                             public void flatMap(FlowObservation value, Collector<Tuple2<FlowObservation, Integer>> out) throws Exception {
-                                 Integer count1;
-                                 if (flowObservationValueState.value() != null) {
-                                     FlowObservation flowObservation = flowObservationValueState.value();
-                                     count1 = flowObservation.count != null ? flowObservation.count : 0;
-                                     count1++;
-                                     flowObservation.setCount(count1 + 1);
-                                     flowObservationValueState.update(flowObservation);
-                                 } else {
-                                     count1 = 1;
-                                     value.setCount(count1);
-                                     flowObservationValueState.update(value);
-                                 }
-                                 out.collect(new Tuple2<>(value, count1));
-                             }
+                    @Override
+                    public void flatMap(FlowObservation value, Collector<FlowObservation> out) throws Exception {
 
-                             @Override
-                             public void open(Configuration parameters) throws Exception {
+                        Integer count1;
+                        if (flowObservationValueState.value() != null) {
+                            FlowObservation flowObservation = flowObservationValueState.value();
+                            count1 = flowObservation.count != null ? flowObservation.count : 0;
+                            count1++;
+                            flowObservation.setCount(count1);
+                            flowObservationValueState.update(flowObservation);
+                            out.collect(value);
+                        } else {
+                            count1 = 1;
+                            value.setCount(count1);
+                            flowObservationValueState.update(value);
+                            out.collect(value);
+                        }
+                    }
 
-                                 flowObservationValueState = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<FlowObservation>("TestFewKeysTestFlowObservationValueState", FlowObservation.class));
+                    @Override
+                    public void open(Configuration parameters) throws Exception {
 
-                             }
+                        flowObservationValueState = getRuntimeContext().getState(
+                                new ValueStateDescriptor<FlowObservation>("TestFewKeysTest", FlowObservation.class));
+                    }
 
                          }
                 );
