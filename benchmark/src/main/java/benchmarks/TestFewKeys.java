@@ -65,8 +65,8 @@ public class TestFewKeys {
                              }
 
                          }
-                );
-        largeState(flowStream);
+                ).print();
+        //largeState(flowStream);
         processSpeedStream(speedStream);
     }
 
