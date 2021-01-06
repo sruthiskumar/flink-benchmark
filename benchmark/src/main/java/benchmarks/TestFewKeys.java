@@ -46,13 +46,13 @@ public class TestFewKeys {
 
     public static void test(DataStream<FlowObservation> flowStream, DataStream<SpeedObservation> speedStream) {
         flowStream.keyBy(x -> x.flow)
-                .flatMap(new RichFlatMapFunction<FlowObservation, Tuple2<FlowObservation, Integer>>() {
+                .flatMap(new RichFlatMapFunction<FlowObservation, FlowObservation>() {
 
                              private ValueState<Integer> flowCount;
                              private ValueState<FlowObservation> flowObservationValueState;
 
                              @Override
-                             public void flatMap(FlowObservation value, Collector<Tuple2<FlowObservation, Integer>> out) throws Exception {
+                             public void flatMap(FlowObservation value, Collector<FlowObservation> out) throws Exception {
                                  Integer count = flowCount.value() != null ? flowCount.value() : 0;
                                  flowCount.update(count + 1);
                                  if (flowObservationValueState.value() != null) {
@@ -64,7 +64,7 @@ public class TestFewKeys {
                                      value.setCount(1);
                                      flowObservationValueState.update(value);
                                  }
-                                 out.collect(new Tuple2<>(value, count));
+                                 out.collect(value);
                              }
 
                              @Override
