@@ -60,23 +60,12 @@ public class TestMoreKeys {
                 .flatMap(new RichFlatMapFunction<FlowObservation, FlowObservation>() {
 
                     private ValueState<Integer> flowCount;
-                    private ValueState<FlowObservation> flowObservationValueState;
 
                              @Override
                              public void flatMap(FlowObservation value, Collector<FlowObservation> out) throws Exception {
                                  Integer count = flowCount.value() != null ? flowCount.value() : 0;
                                  flowCount.update(count + 1);
-                                 if (flowObservationValueState.value() != null) {
-                                     FlowObservation flowObservation = flowObservationValueState.value();
-                                     Integer count1 = flowObservation.count != null ? flowObservation.count : 0;
-                                     flowObservation.setCount(count1 + 1);
-                                     flowObservationValueState.update(flowObservation);
-                                     out.collect(flowObservation);
-                                 } else {
-                                     value.setCount(1);
-                                     flowObservationValueState.update(value);
-                                     out.collect(value);
-                                 }
+                                 out.collect(value);
                              }
 
                              @Override
@@ -84,8 +73,6 @@ public class TestMoreKeys {
                                  flowCount = getRuntimeContext().getState(
                                          new ValueStateDescriptor<Integer>("TestMoreKeysTest", BasicTypeInfo.INT_TYPE_INFO));
 
-                                 flowObservationValueState = getRuntimeContext().getState(
-                                         new ValueStateDescriptor<FlowObservation>("TestMoreKeysTestFlowObservationValueState", FlowObservation.class));
                              }
 
                          }
